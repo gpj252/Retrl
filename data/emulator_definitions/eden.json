@@ -1,0 +1,22 @@
+{
+  "id": "eden",
+  "name": "Eden",
+  "platforms": ["switch", "switch2"],
+  "extensions": ["nsp", "nsz", "xci"],
+  "source": {
+    "type": "git_releases",
+    "repo": "eden-emu/eden",
+    "api_base": "https://git.eden-emu.dev/api/v1",
+    "asset_pattern": "*Linux-*-amd64-gcc-standard.AppImage"
+  },
+  "versions": {
+    "installed": [],
+    "active": null
+  },
+  "launch": {
+    "args_template": ["{rom_path}"]
+  },
+  "requires_core": false,
+  "verified": true,
+  "notes": "Confirmed against the real repo (git.eden-emu.dev, self-hosted Gitea/Forgejo) - 14 releases found, latest v0.2.1. Each release ships many Linux AppImage variants (gcc-standard, clang-pgo, legacy, rog-ally, steamdeck, aarch64); the pattern here picks the generic amd64 gcc-standard build as a safe default. Edit the pattern in Settings if you want a hardware-specific build instead."
+}

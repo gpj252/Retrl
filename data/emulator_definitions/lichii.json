@@ -1,0 +1,22 @@
+{
+  "id": "lichii",
+  "name": "Lichii",
+  "platforms": ["switch2"],
+  "extensions": ["nup"],
+  "source": {
+    "type": "git_releases",
+    "repo": "zortos293/Lichii",
+    "api_base": "https://api.github.com",
+    "asset_pattern": "*linux-x86_64.AppImage"
+  },
+  "versions": {
+    "installed": [],
+    "active": null
+  },
+  "launch": {
+    "args_template": ["{rom_path}"]
+  },
+  "requires_core": false,
+  "verified": true,
+  "notes": "Repo's own description: 'VERY experimental Nintendo Switch 2 emulator' - scoped to switch2 only on that basis, not switch1. Confirmed against the real GitHub repo - 11 releases found, each with a direct linux-x86_64.AppImage asset."
+}

@@ -1,0 +1,22 @@
+{
+  "id": "dolphin",
+  "name": "Dolphin",
+  "platforms": ["gamecube", "wii"],
+  "extensions": ["iso", "gcm", "rvz", "wbfs"],
+  "source": {
+    "type": "github_releases",
+    "repo": "dolphin-emu/dolphin",
+    "asset_pattern": "*.AppImage"
+  },
+  "versions": {
+    "installed": [],
+    "active": null
+  },
+  "launch": {
+    "binary_template": "{install_dir}/{version}/Dolphin.AppImage",
+    "args_template": ["-b", "-e", "{rom_path}"]
+  },
+  "requires_core": false,
+  "verified": false,
+  "notes": "repo/asset_pattern/launch args are placeholders - Dolphin's official releases may not ship as a plain AppImage. Confirm against an actual release before relying on the updater for this entry."
+}

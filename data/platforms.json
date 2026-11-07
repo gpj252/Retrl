@@ -1,0 +1,71 @@
+{
+  "platforms": [
+    {
+      "id": "n64",
+      "name": "Nintendo 64",
+      "extensions": ["n64", "z64", "v64"],
+      "default_emulator": "retroarch",
+      "emulators": ["retroarch", "quiver"],
+      "accent_color": "#6a3fb5"
+    },
+    {
+      "id": "gamecube",
+      "name": "Nintendo GameCube",
+      "extensions": ["iso", "gcm", "rvz"],
+      "default_emulator": "dolphin",
+      "emulators": ["dolphin"],
+      "accent_color": "#3f6fb5"
+    },
+    {
+      "id": "wii",
+      "name": "Nintendo Wii",
+      "extensions": ["iso", "wbfs", "rvz"],
+      "default_emulator": "dolphin",
+      "emulators": ["dolphin"],
+      "accent_color": "#3fa0b5"
+    },
+    {
+      "id": "switch",
+      "name": "Nintendo Switch",
+      "extensions": ["nsp", "nsz", "xci"],
+      "default_emulator": "eden",
+      "emulators": ["eden", "eglantine"],
+      "accent_color": "#d23f5a"
+    },
+    {
+      "id": "switch2",
+      "name": "Nintendo Switch 2",
+      "extensions": ["nup"],
+      "default_emulator": "eden",
+      "emulators": ["eden", "eglantine"],
+      "accent_color": "#d2703f"
+    },
+    {
+      "id": "recomp",
+      "name": "Native Recompilations",
+      "extensions": [],
+      "default_emulator": null,
+      "emulators": ["quiver", "top"],
+      "library_adapter": "quiver",
+      "accent_color": "#3fb57a",
+      "note": "Each recomp is a standalone native binary - Quiver manages externally-downloaded recomps (a configured directory on this platform is scanned via the Quiver adapter), but launching bypasses Quiver and runs the game's own binary directly, so default_emulator stays null (native). A recomp we track directly (e.g. 'top') is instead just an emulator_definitions entry with integration_mode 'recomp' - no ROM, tracked/installed/launched via the same git-releases machinery as any emulator, just standalone (see EmulatorLibrary/EmulatorDetail)."
+    },
+    {
+      "id": "nds",
+      "name": "Nintendo DS",
+      "extensions": ["nds", "dsi"],
+      "default_emulator": "melonds",
+      "emulators": ["melonds"],
+      "accent_color": "#c9a94a"
+    },
+    {
+      "id": "pc",
+      "name": "PC",
+      "extensions": ["exe", "sh", "AppImage"],
+      "default_emulator": null,
+      "emulators": [],
+      "accent_color": "#8a8f99",
+      "note": "Non-emulated native/PC games launch directly; no emulator assigned."
+    }
+  ]
+}

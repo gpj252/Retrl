@@ -1,0 +1,22 @@
+{
+  "id": "retroarch",
+  "name": "RetroArch",
+  "platforms": ["n64"],
+  "extensions": ["n64", "z64", "v64"],
+  "source": {
+    "type": "github_releases",
+    "repo": "libretro/RetroArch",
+    "asset_pattern": "*.AppImage"
+  },
+  "versions": {
+    "installed": [],
+    "active": null
+  },
+  "launch": {
+    "binary_template": "{install_dir}/{version}/RetroArch.AppImage",
+    "args_template": ["-f", "-L", "{core}", "{rom_path}"]
+  },
+  "requires_core": true,
+  "verified": false,
+  "notes": "Multi-system core-based emulator; needs a libretro core path (e.g. mupen64plus_next) in addition to the ROM. repo/asset_pattern/launch args are placeholders - confirm against an actual RetroArch release before relying on the updater for this entry."
+}

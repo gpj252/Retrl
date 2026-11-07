@@ -1,0 +1,23 @@
+{
+  "id": "quiver",
+  "name": "Quiver",
+  "platforms": ["recomp", "n64"],
+  "extensions": [],
+  "integration_mode": "library_adapter",
+  "source": {
+    "type": "github_releases",
+    "repo": "quiver-launcher/quiver",
+    "asset_pattern": "*.AppImage"
+  },
+  "versions": {
+    "installed": [],
+    "active": null
+  },
+  "launch": {
+    "binary_template": "{install_dir}/{version}/Quiver.AppImage",
+    "args_template": ["--launch", "{game_id}"]
+  },
+  "requires_core": false,
+  "verified": false,
+  "notes": "PLACEHOLDER. Quiver manages its own library of native recompilation builds rather than matching ROM files by extension. integration_mode 'library_adapter' means our adapter should read Quiver's own game list/config and surface those entries, delegating the actual launch to Quiver (or the recomp binary it points at) rather than building launch args from a bare ROM path. repo/paths/CLI not yet confirmed against a real Quiver install."
+}

@@ -1,0 +1,23 @@
+{
+  "id": "top",
+  "name": "The Oracles Project",
+  "platforms": ["recomp"],
+  "extensions": [],
+  "integration_mode": "recomp",
+  "source": {
+    "type": "git_releases",
+    "repo": "thibautbus/top",
+    "api_base": "https://api.github.com",
+    "asset_pattern": "*linux-x86_64.AppImage"
+  },
+  "versions": {
+    "installed": [],
+    "active": null
+  },
+  "launch": {
+    "args_template": []
+  },
+  "requires_core": false,
+  "verified": true,
+  "notes": "Native port (not a ROM-patching emulator) of Oracle of Ages/Seasons - self-contained, no game file to point at, so args_template is empty and it launches standalone like any other 'recomp' integration_mode entry. Confirmed against the real GitHub repo via a live releases fetch + asset-pattern match - 5 releases found; v1.4.0 and v1.3.0 each resolve a real linux-x86_64.AppImage download URL, v1.2.0 and older only ship a linux-x86_64.tar.gz, which this launcher's installer doesn't extract yet (same .tar.gz gap noted in the README roadmap) - those versions correctly show 'No matching asset' rather than installing something broken. Repo/asset-pattern verified for real; the actual download/install/launch round-trip hasn't been run on this machine yet."
+}

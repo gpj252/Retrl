@@ -1,0 +1,22 @@
+{
+  "id": "eglantine",
+  "name": "Eglantine",
+  "platforms": ["switch", "switch2"],
+  "extensions": ["nsp", "nsz", "xci"],
+  "source": {
+    "type": "git_releases",
+    "repo": "Djihads80/Eglantine",
+    "api_base": "https://api.github.com",
+    "asset_pattern": "*linux-x86_64.AppImage"
+  },
+  "versions": {
+    "installed": [],
+    "active": null
+  },
+  "launch": {
+    "args_template": ["{rom_path}"]
+  },
+  "requires_core": false,
+  "verified": true,
+  "notes": "Confirmed against the real GitHub repo - 30 releases found, each with a direct linux-x86_64.AppImage asset (no extraction needed)."
+}

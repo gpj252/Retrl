@@ -1,0 +1,20 @@
+{
+  "_comment": "PLACEHOLDER demo data so Home/Library have something to render. Replaced by a real LibraryScanner that scans configured ROM/install directories in a later milestone. Titles here are fictional stand-ins, not real games.",
+  "games": [
+    { "id": "s1", "title": "Mountain Kart Classic", "platform_id": "n64", "last_played": "2026-11-05", "playtime_hours": 12.4 },
+    { "id": "s2", "title": "Starfall Odyssey", "platform_id": "n64", "last_played": null, "playtime_hours": 0 },
+    { "id": "s3", "title": "Tiny Tank Brigade", "platform_id": "n64", "last_played": "2026-10-02", "playtime_hours": 3.1 },
+    { "id": "s4", "title": "Crystal Caverns", "platform_id": "gamecube", "last_played": "2026-11-04", "playtime_hours": 21.0 },
+    { "id": "s5", "title": "Pocket League Pro", "platform_id": "gamecube", "last_played": null, "playtime_hours": 0 },
+    { "id": "s6", "title": "Windwalker Saga", "platform_id": "wii", "last_played": "2026-10-20", "playtime_hours": 8.6 },
+    { "id": "s7", "title": "Moto Rally Resort", "platform_id": "wii", "last_played": null, "playtime_hours": 0 },
+    { "id": "s8", "title": "Realmforge Tactics", "platform_id": "switch", "last_played": "2026-11-06", "playtime_hours": 44.2 },
+    { "id": "s9", "title": "Lantern Keep", "platform_id": "switch", "last_played": "2026-09-14", "playtime_hours": 5.5 },
+    { "id": "s10", "title": "Skybound Express", "platform_id": "switch2", "last_played": null, "playtime_hours": 0 },
+    { "id": "s11", "title": "Nova Drift", "platform_id": "switch2", "last_played": "2026-11-01", "playtime_hours": 2.0 },
+    { "id": "s12", "title": "Dustrunner Redux", "platform_id": "recomp", "last_played": "2026-10-29", "playtime_hours": 9.9 },
+    { "id": "s13", "title": "Hollow Orbit", "platform_id": "recomp", "last_played": null, "playtime_hours": 0 },
+    { "id": "s14", "title": "Signal Lost", "platform_id": "pc", "last_played": "2026-10-31", "playtime_hours": 15.3 },
+    { "id": "s15", "title": "Harvest Hollow", "platform_id": "pc", "last_played": null, "playtime_hours": 0 }
+  ]
+}

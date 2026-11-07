@@ -1,0 +1,22 @@
+{
+  "id": "melonds",
+  "name": "melonDS",
+  "platforms": ["nds"],
+  "extensions": ["nds", "dsi"],
+  "source": {
+    "type": "git_releases",
+    "repo": "melonDS-emu/melonDS",
+    "api_base": "https://api.github.com",
+    "asset_pattern": "*appimage-x86_64.zip"
+  },
+  "versions": {
+    "installed": [],
+    "active": null
+  },
+  "launch": {
+    "args_template": ["{rom_path}"]
+  },
+  "requires_core": false,
+  "verified": true,
+  "notes": "Confirmed against the real GitHub repo. Unlike the others, melonDS's Linux build is only ever shipped zipped (no bare .AppImage asset exists) - confirmed by downloading and inspecting one: the zip contains exactly one file, melonDS-x86_64.AppImage. UpdateManager now extracts .zip assets and picks the .AppImage inside automatically."
+}

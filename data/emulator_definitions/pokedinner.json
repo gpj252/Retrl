@@ -1,0 +1,22 @@
+{
+  "id": "pokedinner",
+  "name": "PokeDinner (Eglantine fork)",
+  "platforms": ["switch", "switch2"],
+  "extensions": ["nsp", "nsz", "xci"],
+  "source": {
+    "type": "git_releases",
+    "repo": "Franseven/PokeDinner-a-Eglantine-Fork",
+    "api_base": "https://git.eden-emu.dev/api/v1",
+    "asset_pattern": "*linux-x86_64.AppImage"
+  },
+  "versions": {
+    "installed": [],
+    "active": null
+  },
+  "launch": {
+    "args_template": ["{rom_path}"]
+  },
+  "requires_core": false,
+  "verified": true,
+  "notes": "Fork of Eglantine (itself a fork of Eden), primary focus Pokopia per its own description. Confirmed against the real repo - 6 releases found. Most ship a direct linux-x86_64.AppImage; the newest release (2.7.7) regressed to Windows-only, so installing that specific version will correctly report 'no matching asset' rather than install a broken file."
+}

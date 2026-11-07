@@ -1,0 +1,12 @@
+[config]
+version=1
+
+[launcher]
+version=1.13.1
+project_name="retrl"
+
+[editor]
+channel=official
+flavor=gdscript
+base_version=4.3
+version=4.3-stable
