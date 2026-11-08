@@ -133,6 +133,67 @@ func _build_general_pane(game: Dictionary, flash_message: String = "") -> void:
 
 	general_pane.add_child(HSeparator.new())
 
+	var ra_label := Label.new()
+	ra_label.text = "RetroAchievements game ID"
+	ra_label.add_theme_font_size_override("font_size", 18)
+	general_pane.add_child(ra_label)
+
+	var ra_row := HBoxContainer.new()
+	ra_row.add_theme_constant_override("separation", 12)
+	general_pane.add_child(ra_row)
+
+	var ra_edit := LineEdit.new()
+	var existing_ra_id: int = game.get("retroachievements_game_id", 0)
+	ra_edit.text = str(existing_ra_id) if existing_ra_id > 0 else ""
+	ra_edit.placeholder_text = "e.g. 1234"
+	ra_edit.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	ra_row.add_child(ra_edit)
+
+	var ra_save_button := Button.new()
+	ra_save_button.text = "Save"
+	ra_row.add_child(ra_save_button)
+
+	var ra_search_button := Button.new()
+	ra_search_button.text = "Search"
+	ra_row.add_child(ra_search_button)
+
+	var ra_feedback := Label.new()
+	ra_feedback.add_theme_color_override("font_color", DOWNLOAD_COLOR)
+	general_pane.add_child(ra_feedback)
+
+	var ra_results_box := VBoxContainer.new()
+	ra_results_box.add_theme_constant_override("separation", 4)
+	general_pane.add_child(ra_results_box)
+
+	var ra_hint := Label.new()
+	ra_hint.text = "The number in this game's retroachievements.org URL (e.g. retroachievements.org/game/1234 -> 1234) - \"Search\" finds it by title/platform automatically (best-effort, title match only, not a ROM hash - verify or pick a different result if it's wrong). Read-only either way - this only displays your already-earned achievements (via the account in Settings -> Art), it can't unlock anything itself."
+	ra_hint.add_theme_color_override("font_color", DOWNLOAD_COLOR)
+	ra_hint.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	general_pane.add_child(ra_hint)
+
+	var do_save_ra := func(ra_id_to_save: int, saved_message: String):
+		LibraryScanner.set_retroachievements_id(_game_id, ra_id_to_save)
+		ra_edit.text = str(ra_id_to_save) if ra_id_to_save > 0 else ""
+		ra_feedback.text = saved_message
+		ra_feedback.add_theme_color_override("font_color", DOWNLOAD_COLOR)
+		for child in ra_results_box.get_children():
+			child.queue_free()
+
+	var do_manual_save := func():
+		var trimmed := ra_edit.text.strip_edges()
+		var ra_id := int(trimmed) if trimmed.is_valid_int() else 0
+		if trimmed != "" and ra_id <= 0:
+			ra_feedback.text = "That doesn't look like a valid game ID (should be a plain number)."
+			ra_feedback.add_theme_color_override("font_color", Color(0.9, 0.45, 0.45, 1))
+			return
+		do_save_ra.call(ra_id, "Saved." if ra_id > 0 else "Cleared.")
+	ra_save_button.pressed.connect(do_manual_save)
+	ra_edit.text_submitted.connect(func(_text: String): do_manual_save.call())
+
+	ra_search_button.pressed.connect(func(): _search_retroachievements(game, ra_results_box, ra_feedback, do_save_ra))
+
+	general_pane.add_child(HSeparator.new())
+
 	var platform: Dictionary = EmulatorRegistry.get_platform(game.get("platform_id", ""))
 	var lines := [
 		"Platform: %s" % platform.get("name", "?"),
@@ -151,6 +212,41 @@ func _refresh_after_rename(message: String) -> void:
 	if shell:
 		shell.set_title("%s — Settings" % updated.get("title", "Game"))
 	_build_general_pane(updated, message)
+
+## Auto-detect, title+platform only (AchievementsManager.search_games - see
+## its header comment for exactly why this is a best-effort title match,
+## not RA's own ROM-hash identification) - results are a click away from
+## saving, same "search, pick one, done" shape as the SteamGridDB art
+## search below, but manual entry (do_save_ra's caller) stays right there
+## for a misrecognized/ambiguous title.
+func _search_retroachievements(game: Dictionary, results_box: VBoxContainer, feedback: Label, do_save_ra: Callable) -> void:
+	for child in results_box.get_children():
+		child.queue_free()
+	feedback.text = "Searching..."
+	feedback.add_theme_color_override("font_color", DOWNLOAD_COLOR)
+
+	var platform: Dictionary = EmulatorRegistry.get_platform(game.get("platform_id", ""))
+	var result: Dictionary = await AchievementsManager.search_games(game.get("scanned_title", game.get("title", "")), platform.get("name", ""))
+	if not is_instance_valid(results_box):
+		return  # pane was rebuilt/torn down while we were awaiting the network
+
+	if not result.get("ok", false):
+		feedback.text = result.get("message", "No match found.")
+		feedback.add_theme_color_override("font_color", Color(0.9, 0.45, 0.45, 1))
+		return
+
+	feedback.text = "Pick the right one (or leave as-is / type an ID manually if none match):"
+	var first_button: Button = null
+	for candidate in result.get("results", []):
+		var candidate_button := Button.new()
+		candidate_button.text = "%s  (id %d)" % [candidate.get("title", "?"), candidate.get("id", 0)]
+		candidate_button.alignment = HORIZONTAL_ALIGNMENT_LEFT
+		results_box.add_child(candidate_button)
+		candidate_button.pressed.connect(do_save_ra.bind(candidate.get("id", 0), "Saved \"%s\"." % candidate.get("title", "?")))
+		if first_button == null:
+			first_button = candidate_button
+	if first_button != null:
+		first_button.grab_focus()
 
 func _build_emulator_pane(game: Dictionary) -> void:
 	for child in emulator_pane.get_children():

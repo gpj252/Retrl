@@ -925,6 +925,17 @@ func _refresh_recomps_tab() -> void:
 # ======================== Art ========================
 
 func _build_art_pane() -> void:
+	_build_install_dir_row(
+		art_pane,
+		"Screenshots folder",
+		ScreenshotManager.screenshots_dir(),
+		ScreenshotManager.default_screenshots_dir(),
+		Callable(ScreenshotManager, "set_screenshots_dir"),
+	)
+	art_pane.add_child(HSeparator.new())
+	_build_retroachievements_section()
+	art_pane.add_child(HSeparator.new())
+
 	var hint := Label.new()
 	hint.text = "Cover art comes from SteamGridDB (needs a free API key - steamgriddb.com/profile/preferences) or a file you upload yourself, per game, from its Settings page."
 	hint.add_theme_color_override("font_color", INACTIVE_COLOR)
@@ -962,4 +973,59 @@ func _build_art_pane() -> void:
 	save_button.pressed.connect(func():
 		ArtManager.set_api_key(key_edit.text)
 		feedback.text = "Saved." if ArtManager.has_api_key() else "Key cleared."
+	)
+
+## RetroAchievements is read-only here (AchievementsManager) - this account
+## is only ever used to ask "what has this user already earned", never to
+## unlock anything, so it's exactly the kind of credential this tab already
+## holds (SteamGridDB's key, right below). Username + Web API key are both
+## on the account's own Settings page at retroachievements.org.
+func _build_retroachievements_section() -> void:
+	var hint := Label.new()
+	hint.text = "RetroAchievements (read-only): shows a game's achievement list and your already-earned status, from your account's Web API key (retroachievements.org -> Settings). Unlocking still happens inside whichever emulator you've set up with RA support (e.g. RetroArch) - this never unlocks anything itself."
+	hint.add_theme_color_override("font_color", INACTIVE_COLOR)
+	hint.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	art_pane.add_child(hint)
+
+	var user_row := HBoxContainer.new()
+	user_row.add_theme_constant_override("separation", 12)
+	art_pane.add_child(user_row)
+
+	var username_edit := LineEdit.new()
+	username_edit.text = AchievementsManager.get_username()
+	username_edit.placeholder_text = "RetroAchievements username"
+	username_edit.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	user_row.add_child(username_edit)
+
+	var key_row := HBoxContainer.new()
+	key_row.add_theme_constant_override("separation", 12)
+	art_pane.add_child(key_row)
+
+	var key_edit := LineEdit.new()
+	key_edit.secret = true
+	key_edit.text = AchievementsManager.get_web_api_key()
+	key_edit.placeholder_text = "Web API key"
+	key_edit.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	key_row.add_child(key_edit)
+
+	var reveal_button := Button.new()
+	reveal_button.text = "Show"
+	reveal_button.toggle_mode = true
+	reveal_button.toggled.connect(func(pressed: bool):
+		key_edit.secret = not pressed
+		reveal_button.text = "Hide" if pressed else "Show"
+	)
+	key_row.add_child(reveal_button)
+
+	var save_button := Button.new()
+	save_button.text = "Save"
+	key_row.add_child(save_button)
+
+	var feedback := Label.new()
+	feedback.add_theme_color_override("font_color", FEEDBACK_COLOR)
+	art_pane.add_child(feedback)
+
+	save_button.pressed.connect(func():
+		AchievementsManager.set_credentials(username_edit.text, key_edit.text)
+		feedback.text = "Saved." if AchievementsManager.has_credentials() else "Cleared."
 	)

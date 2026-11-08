@@ -28,6 +28,7 @@ extends Control
 @onready var menu_items: VBoxContainer = %MenuItems
 @onready var playing_overlay: Control = %PlayingOverlay
 @onready var playing_label: Label = %PlayingLabel
+@onready var screenshot_feedback_label: Label = %ScreenshotFeedbackLabel
 
 var _window_mode_before_play: int = -1
 
@@ -40,10 +41,17 @@ func _ready() -> void:
 	_update_clock()
 	LaunchManager.game_started.connect(_on_game_started)
 	LaunchManager.game_stopped.connect(_on_game_stopped)
+	# Connected signal handlers still fire while get_tree().paused is true
+	# (pause only gates per-frame _process/_input, not emitted signals) -
+	# same reason _on_game_started/_on_game_stopped already work despite
+	# Shell itself being paused. This is the only feedback the screenshot
+	# hotkey gets while the Playing overlay is up.
+	LaunchManager.screenshot_captured.connect(_on_screenshot_captured)
 
 func _on_game_started(label: String) -> void:
 	close_side_menu()
 	playing_label.text = "Playing %s\n\nThe launcher is paused - it'll come back when you close this." % label
+	screenshot_feedback_label.text = ""
 	playing_overlay.visible = true
 	_window_mode_before_play = get_window().mode
 	get_window().mode = Window.MODE_MINIMIZED
@@ -55,6 +63,15 @@ func _on_game_stopped() -> void:
 		get_window().mode = _window_mode_before_play
 		_window_mode_before_play = -1
 	playing_overlay.visible = false
+
+func _on_screenshot_captured(ok: bool, message: String) -> void:
+	if not playing_overlay.visible:
+		return
+	screenshot_feedback_label.text = message
+	screenshot_feedback_label.add_theme_color_override(
+		"font_color",
+		Color(0.4, 0.85, 0.5, 1) if ok else Color(0.9, 0.45, 0.45, 1)
+	)
 
 func _process(_delta: float) -> void:
 	_update_clock()

@@ -3,7 +3,7 @@ version=1
 
 [launcher]
 version=1.13.1
-project_name="retrl"
+project_name="Launcher"
 
 [editor]
 channel=official

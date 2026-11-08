@@ -166,6 +166,7 @@ func _apply_resolution(game: Dictionary) -> void:
 
 	var display_name: String = override.get("display_name", "")
 	game["title"] = display_name if display_name != "" else game["scanned_title"]
+	game["retroachievements_game_id"] = override.get("retroachievements_game_id", 0)
 
 	# A recorded play (actually launched through this app) always wins over
 	# whatever the scan found (null for ROM files - nothing else tracks
@@ -203,6 +204,26 @@ func set_display_name(game_id: String, name: String) -> void:
 		entry.erase("display_name")
 	else:
 		entry["display_name"] = trimmed
+	if entry.is_empty():
+		overrides.erase(game_id)
+	else:
+		overrides[game_id] = entry
+	_save_overrides()
+	var game := get_game(game_id)
+	if not game.is_empty():
+		_apply_resolution(game)
+
+## Sets which RetroAchievements game this ROM corresponds to (the numeric
+## id from its retroachievements.org URL) - manual, since there's no ROM
+## hash computation here (AchievementsManager is deliberately read-only,
+## see its header comment). Pass 0 to clear it. Merges into any existing
+## override, same as set_display_name/set_override.
+func set_retroachievements_id(game_id: String, ra_id: int) -> void:
+	var entry: Dictionary = overrides.get(game_id, {})
+	if ra_id <= 0:
+		entry.erase("retroachievements_game_id")
+	else:
+		entry["retroachievements_game_id"] = ra_id
 	if entry.is_empty():
 		overrides.erase(game_id)
 	else:

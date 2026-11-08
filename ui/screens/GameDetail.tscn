@@ -74,47 +74,87 @@ size_flags_vertical = 8
 theme_override_font_sizes/font_size = 40
 text = "Game Title"
 
-[node name="ContentMargin" type="MarginContainer" parent="Layout"]
+[node name="ContentScroll" type="ScrollContainer" parent="Layout"]
 layout_mode = 2
+size_flags_vertical = 3
+horizontal_scroll_mode = 0
+follow_focus = true
+
+[node name="ContentMargin" type="MarginContainer" parent="Layout/ContentScroll"]
+layout_mode = 2
+size_flags_horizontal = 3
 theme_override_constants/margin_left = 56
 theme_override_constants/margin_top = 24
 theme_override_constants/margin_right = 56
 theme_override_constants/margin_bottom = 24
 
-[node name="Content" type="VBoxContainer" parent="Layout/ContentMargin"]
+[node name="Content" type="VBoxContainer" parent="Layout/ContentScroll/ContentMargin"]
+layout_mode = 2
+size_flags_horizontal = 3
+theme_override_constants/separation = 16
+
+[node name="ActionsRow" type="HBoxContainer" parent="Layout/ContentScroll/ContentMargin/Content"]
 layout_mode = 2
 theme_override_constants/separation = 16
 
-[node name="ActionsRow" type="HBoxContainer" parent="Layout/ContentMargin/Content"]
-layout_mode = 2
-theme_override_constants/separation = 16
-
-[node name="PlayButton" type="Button" parent="Layout/ContentMargin/Content/ActionsRow"]
+[node name="PlayButton" type="Button" parent="Layout/ContentScroll/ContentMargin/Content/ActionsRow"]
 unique_name_in_owner = true
 layout_mode = 2
 text = "▶  Play"
 
-[node name="OpenEmulatorButton" type="Button" parent="Layout/ContentMargin/Content/ActionsRow"]
+[node name="OpenEmulatorButton" type="Button" parent="Layout/ContentScroll/ContentMargin/Content/ActionsRow"]
 unique_name_in_owner = true
 visible = false
 layout_mode = 2
 text = "Open Emulator"
 
-[node name="ActionsSpacer" type="Control" parent="Layout/ContentMargin/Content/ActionsRow"]
+[node name="ActionsSpacer" type="Control" parent="Layout/ContentScroll/ContentMargin/Content/ActionsRow"]
 layout_mode = 2
 size_flags_horizontal = 3
 
-[node name="GearButton" type="Button" parent="Layout/ContentMargin/Content/ActionsRow"]
+[node name="GearButton" type="Button" parent="Layout/ContentScroll/ContentMargin/Content/ActionsRow"]
 unique_name_in_owner = true
 layout_mode = 2
 text = "⚙"
 
-[node name="MetaLabel" type="Label" parent="Layout/ContentMargin/Content"]
+[node name="MetaLabel" type="Label" parent="Layout/ContentScroll/ContentMargin/Content"]
 unique_name_in_owner = true
 layout_mode = 2
 theme_override_colors/font_color = Color(0.6, 0.65, 0.7, 1)
 
-[node name="StatusLabel" type="Label" parent="Layout/ContentMargin/Content"]
+[node name="StatusLabel" type="Label" parent="Layout/ContentScroll/ContentMargin/Content"]
 unique_name_in_owner = true
 layout_mode = 2
 theme_override_colors/font_color = Color(0.5, 0.75, 0.95, 1)
+
+[node name="TabsSep" type="HSeparator" parent="Layout/ContentScroll/ContentMargin/Content"]
+layout_mode = 2
+
+[node name="Tabs" type="HBoxContainer" parent="Layout/ContentScroll/ContentMargin/Content"]
+layout_mode = 2
+theme_override_constants/separation = 24
+
+[node name="AchievementsTabButton" type="Button" parent="Layout/ContentScroll/ContentMargin/Content/Tabs"]
+unique_name_in_owner = true
+layout_mode = 2
+text = "Achievements"
+
+[node name="ScreenshotsTabButton" type="Button" parent="Layout/ContentScroll/ContentMargin/Content/Tabs"]
+unique_name_in_owner = true
+layout_mode = 2
+text = "Screenshots"
+
+[node name="AchievementsPane" type="VBoxContainer" parent="Layout/ContentScroll/ContentMargin/Content"]
+unique_name_in_owner = true
+layout_mode = 2
+size_flags_horizontal = 3
+theme_override_constants/separation = 8
+
+[node name="ScreenshotsPane" type="GridContainer" parent="Layout/ContentScroll/ContentMargin/Content"]
+unique_name_in_owner = true
+visible = false
+layout_mode = 2
+size_flags_horizontal = 3
+columns = 5
+theme_override_constants/h_separation = 12
+theme_override_constants/v_separation = 12

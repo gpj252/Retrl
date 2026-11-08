@@ -22,6 +22,8 @@ LibraryScanner="*res://autoload/LibraryScanner.gd"
 UpdateManager="*res://autoload/UpdateManager.gd"
 LaunchManager="*res://autoload/LaunchManager.gd"
 ArtManager="*res://autoload/ArtManager.gd"
+AchievementsManager="*res://autoload/AchievementsManager.gd"
+ScreenshotManager="*res://autoload/ScreenshotManager.gd"
 Navigator="*res://autoload/Navigator.gd"
 InputManager="*res://autoload/InputManager.gd"
 

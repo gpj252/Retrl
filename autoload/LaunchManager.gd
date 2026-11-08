@@ -24,14 +24,23 @@ extends Node
 ## let Shell pause input and yield window focus for the duration; this guard
 ## is the hard stop regardless of whether that actually reaches the
 ## compositor in a given gamescope session.
+##
+## Also owns the screenshot hotkey (see _unhandled_input below) - this node
+## is already PROCESS_MODE_ALWAYS for the poll timer's sake, which is
+## exactly what lets one specific input combo keep working while Shell has
+## paused everything else for the "playing" state. Whether that combo's
+## *events* even reach this node while the window is minimized/unfocused is
+## a separate, unconfirmed question - see the comment on _unhandled_input.
 
 signal game_started(label: String)
 signal game_stopped()
+signal screenshot_captured(ok: bool, message: String)
 
 const EXIT_POLL_INTERVAL_SECONDS := 1.0
 
 var _running_pid: int = -1
 var _poll_timer: Timer
+var _screenshot_key: String = ""
 
 func _ready() -> void:
 	# Must keep polling (and Shell must keep un-pausing) even while the rest
@@ -47,6 +56,12 @@ func _ready() -> void:
 func is_game_running() -> bool:
 	return _running_pid > 0
 
+## screenshot_key identifies which game/recomp a screenshot taken during
+## this run should be filed under (ArtManager-style: a game's real id, or
+## "recomp:<id>" - see RecompDetail/GameDetail). "" means "don't know/not
+## applicable" (e.g. opening just an emulator's own UI with no game loaded)
+## - the hotkey below silently no-ops rather than saving somewhere with no
+## game attached.
 func launch(game: Dictionary) -> Dictionary:
 	if is_game_running():
 		return _fail("A game is already running — close it before launching another.")
@@ -57,7 +72,7 @@ func launch(game: Dictionary) -> Dictionary:
 	if emulator_id == "":
 		if rom_path == "":
 			return _fail("No ROM/executable path set for this game.")
-		return _run(rom_path, [], game.get("title", "Game"))
+		return _run(rom_path, [], game.get("title", "Game"), game.get("id", ""))
 
 	var resolved := _resolve_emulator_binary(emulator_id, game.get("resolved_version", null))
 	if not resolved.get("ok", false):
@@ -68,7 +83,7 @@ func launch(game: Dictionary) -> Dictionary:
 	for raw_arg in launch_def.get("args_template", []):
 		args.append(String(raw_arg).replace("{rom_path}", rom_path).replace("{version}", resolved["version"]))
 
-	return _run(resolved["binary_path"], args, game.get("title", "Game"))
+	return _run(resolved["binary_path"], args, game.get("title", "Game"), game.get("id", ""))
 
 ## Starts the assigned emulator on its own, with no ROM/game argument - for
 ## reaching its own settings/config screen (controller bindings, video
@@ -90,10 +105,12 @@ func launch_emulator_only(game: Dictionary) -> Dictionary:
 	return _run(resolved["binary_path"], args, resolved["emulator"].get("name", emulator_id))
 
 ## Same as launch_emulator_only, but by emulator id directly rather than a
-## game dict - for the Emulator Library page, which lets you open/try an
-## emulator with no game involved at all. version defaults to that
-## emulator's active install if omitted.
-func launch_emulator_standalone(emulator_id: String, version: Variant = null) -> Dictionary:
+## game dict - used both by the Emulator Library page (opening/trying an
+## emulator with no game involved at all - screenshot_key stays "" there)
+## and by RecompDetail's Play button (a recomp IS the game it plays, so
+## RecompDetail passes "recomp:<id>" as screenshot_key). version defaults
+## to that emulator's active install if omitted.
+func launch_emulator_standalone(emulator_id: String, version: Variant = null, screenshot_key: String = "") -> Dictionary:
 	if is_game_running():
 		return _fail("A game is already running — close it before opening an emulator.")
 
@@ -103,7 +120,7 @@ func launch_emulator_standalone(emulator_id: String, version: Variant = null) ->
 
 	var launch_def: Dictionary = resolved["emulator"].get("launch", {})
 	var args := _build_no_rom_args(launch_def, resolved["version"])
-	return _run(resolved["binary_path"], args, resolved["emulator"].get("name", emulator_id))
+	return _run(resolved["binary_path"], args, resolved["emulator"].get("name", emulator_id), screenshot_key)
 
 ## Args that only make sense with a ROM ({rom_path}) are dropped rather than
 ## passed through unsubstituted - most emulators just open their normal UI
@@ -145,11 +162,12 @@ func _resolve_emulator_binary(emulator_id: String, version_override: Variant = n
 
 	return {"ok": true, "emulator": emulator, "version": version, "binary_path": binary_path}
 
-func _run(binary_path: String, args: Array, label: String) -> Dictionary:
+func _run(binary_path: String, args: Array, label: String, screenshot_key: String = "") -> Dictionary:
 	var pid := OS.create_process(binary_path, args)
 	if pid <= 0:
 		return _fail("Failed to start process: %s" % binary_path)
 	_running_pid = pid
+	_screenshot_key = screenshot_key
 	_poll_timer.start()
 	game_started.emit(label)
 	return {"ok": true, "message": "Launched (pid %d)" % pid, "pid": pid}
@@ -161,9 +179,43 @@ func _check_running_process() -> void:
 	if OS.is_process_running(_running_pid):
 		return
 	_running_pid = -1
+	_screenshot_key = ""
 	_poll_timer.stop()
 	game_stopped.emit()
 
 func _fail(message: String) -> Dictionary:
 	push_warning("[LaunchManager] %s" % message)
 	return {"ok": false, "message": message}
+
+## Screenshot hotkey: Select/Back held + Y/Triangle pressed (controller),
+## or F12 (keyboard, mainly useful testing from the editor). This node is
+## PROCESS_MODE_ALWAYS, so Godot keeps calling this even while Shell has
+## get_tree().paused = true for the "playing" state - that part is
+## guaranteed. What ISN'T guaranteed: whether the event even reaches here
+## at all while the window is minimized/unfocused during actual gameplay.
+## Keyboard almost certainly won't (keyboard focus is strictly one-window-
+## at-a-time on basically every compositor) - controller input has a real
+## chance, since Godot's Linux joypad backend reads raw evdev device nodes
+## directly rather than through window-focus-gated input messages, but
+## that's a real-hardware question, not something provable from code.
+## Silently no-ops if no game is running or it has no screenshot_key (e.g.
+## an emulator opened standalone with no game loaded).
+func _unhandled_input(event: InputEvent) -> void:
+	if not is_game_running() or _screenshot_key == "":
+		return
+
+	var triggered := false
+	if event is InputEventKey and event.pressed and not event.echo and event.keycode == KEY_F12:
+		triggered = true
+	elif event is InputEventJoypadButton and event.pressed and event.button_index == JOY_BUTTON_Y:
+		if Input.is_joy_button_pressed(event.device, JOY_BUTTON_BACK):
+			triggered = true
+
+	if not triggered:
+		return
+	get_viewport().set_input_as_handled()
+	_take_screenshot()
+
+func _take_screenshot() -> void:
+	var result: Dictionary = ScreenshotManager.capture(_screenshot_key)
+	screenshot_captured.emit(result.get("ok", false), result.get("message", ""))

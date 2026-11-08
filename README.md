@@ -65,12 +65,19 @@ Screens now closely follow the Steam Deck UI as a direct reference:
   "Emulator" entirely — there's no ROM here to pick an emulator for, only
   "which build of myself is installed/active". Art gets both cover and hero
   (like a real game), keyed under `"recomp:<id>"`, independent of any
-  `"emulator:<id>"` art the same underlying entry might carry.
+  `"emulator:<id>"` art the same underlying entry might carry. RecompDetail
+  also has a **Screenshots** tab, same gallery as GameDetail's, keyed under
+  that same `"recomp:<id>"` id - no Achievements tab, though (see
+  "RetroAchievements is read-only" below for why that's essentially never
+  applicable to a recomp).
 - **GameDetail** — a game's own page: hero banner, Play button, **Open
   Emulator** (starts the assigned emulator standalone, no ROM - for reaching
   its own settings/config screen without loading a game first; hidden for
   native/no-emulator games), last played/playtime/platform/emulator summary,
-  and the gear icon into...
+  two tabs (**Achievements** - read-only RetroAchievements, see "RetroAchievements
+  is read-only" below; **Screenshots** - a gallery of whatever's been taken
+  while this game was running, see "Screenshots are ours to take, not the
+  emulator's" below), and the gear icon into...
 - **GameSettings** — per-game settings. "General" has a **rename** field
   (`LibraryScanner.set_display_name`) - changes what's shown everywhere,
   never touches the actual ROM file or Quiver folder on disk, revertible via
@@ -117,8 +124,13 @@ Screens now closely follow the Steam Deck UI as a direct reference:
     "Add Local .AppImage", Delete) is identical to an emulator's, since
     `_build_emulator_row` doesn't actually care which kind it's given. Has
     its own **"Recomps download folder"** setting, same as Emulators'.
-  - **Art**: your SteamGridDB API key (stored only in `user://art_settings.json`,
-    never in a committed file).
+  - **Art**: a **"Screenshots folder"** setting (same default-as-is-but-
+    overridable pattern as the two above, see `ScreenshotManager`), a
+    **RetroAchievements account** section (username + Web API key - see
+    "RetroAchievements is read-only" below), then your SteamGridDB API key
+    (stored only in `user://art_settings.json`, never in a committed file).
+    Three different credentials/paths stacked in one tab rather than three
+    new tabs for one or two fields each.
 
 Every path field anywhere in the app (ROM directories, local `.AppImage`,
 the two download folders above) now has a **"Browse..."** button next to
@@ -495,8 +507,154 @@ can control (minimizing can't be exercised meaningfully outside a real
 gamescope session). The pause + concurrent-launch refusal are the parts
 actually guaranteed to hold regardless of that.
 
+### RetroAchievements is read-only
+
+This launcher runs emulators as opaque external processes with no view
+into their memory, so it has no way to detect an achievement unlocking in
+real time - that detection only ever happens inside an emulator with its
+own native RetroAchievements client (RetroArch has one; every Switch
+emulator here, melonDS, and Dolphin don't). `AchievementsManager` doesn't
+try: it's a read-only client for RA's own Web API
+(`API_GetGameInfoAndUserProgress`), which in one call returns a game's
+full achievement list *and* this user's already-earned status for each -
+no ROM hashing needed on our side at all, since we're not identifying the
+game ourselves, just asking "what does RA's server already know". The
+game's RA id (the number in its retroachievements.org URL) is set per game
+in GameSettings -> General (`LibraryScanner.set_retroachievements_id`) -
+manually, or via a **"Search"** button (`AchievementsManager.search_games`)
+that looks up RA's own console-id list by platform name, pulls that
+console's game list, and ranks candidates by a simple normalized-title
+match (strip `[...]`/`(...)` tags and punctuation, then exact ->
+one-contains-the-other -> shared-word-count scoring - not RA's own ROM-
+hash identification, just enough to shortlist candidates for a human to
+pick from). Manual entry stays right there either way, same "search, pick
+one, or type it yourself" shape as the SteamGridDB art search below it -
+useful both for platforms Search can't help with (Switch/Switch2 have no
+matching RA console at all) and for fixing a wrong pick. Credentials
+(username + Web API key, from the account's own Settings page) live in
+`user://retroachievements_settings.json`, same treatment as ArtManager's
+SteamGridDB key. Practically, this means the Achievements tab shows real,
+live data for a game played through an RA-aware emulator *if that
+emulator's own RA login already unlocked things*, and will show "no
+achievements"/an empty set for essentially every Switch game in this
+library, since RA's catalog skews almost entirely classic-console.
+
+### Screenshots are ours to take, not the emulator's
+
+"Have each emulator save its own screenshots into a per-game folder" isn't
+generically possible - every emulator has a different (often global, not
+per-game) screenshot setting, and this app's whole model is user-defined,
+arbitrary emulators with zero emulator-specific code. So `ScreenshotManager`
+takes the screenshot itself, shelling out to a system tool (Godot has no
+"capture whatever's on screen" API of its own - it can only capture its
+own viewport, which isn't what's showing once an emulator's window is up)
+straight into `user://screenshots/<sha256 of game id>/`, a folder it fully
+controls independent of any emulator. Tries, in order: `grim` (the natural
+fit for a bare wlroots/Wayland session), `spectacle` (KDE's tool - confirmed
+working for real on this machine, `spectacle -b -n -o <path>` produced a
+real PNG, exit 0), then `scrot` (X11) as a last resort. The folder itself
+is user-overridable from Settings -> Art, same default-but-overridable
+pattern as the emulator/recomp install folders.
+
+The hotkey that triggers a capture (Select/Back held + Y/Triangle, or F12)
+lives in `LaunchManager._unhandled_input`, which works because that node
+is already `PROCESS_MODE_ALWAYS` for the poll timer's sake - Shell pausing
+the rest of the tree for the "playing" state doesn't stop this one
+listener from being *called*. What's genuinely unconfirmed is whether the
+input *event* ever reaches it while the window is minimized and unfocused
+during actual gameplay, which is a separate question from our own pause
+state entirely: keyboard focus is strictly one-window-at-a-time on
+basically any compositor, so F12 almost certainly won't fire for real.
+Controller input has a real chance, since Godot's Linux joypad backend
+reads raw `evdev` device nodes directly rather than through window-focus-
+gated input messages - but "has a real chance" isn't "confirmed", and this
+is exactly the kind of thing that needs testing on the real handheld
+rather than assumed (same honesty bar as the window-minimize note above).
+If the combo turns out not to fire during real gameplay, the fallback is
+a literal button on the "Playing" overlay itself (which does have real
+input, being part of Shell) - strictly worse since it needs tabbing back
+to the launcher first, but guaranteed to work.
+
+### GameDetail/RecompDetail needed a real scroll, not just a hero height cap
+
+Confirmed broken for real: adding the Achievements/Screenshots tabs put
+real content and real `.png` files on disk (verified directly - 89 real
+achievements fetched, a real screenshot file found at the exact expected
+path) that nonetheless never appeared on screen. Root cause wasn't the
+data layer at all, it was layout: `Hero`'s height was computed purely from
+viewport *width* (`width / 1920:620`), with zero relationship to viewport
+*height*, and the fixed rows below it (Play button row, meta, status, tab
+buttons - each a surprisingly tall ~88px in this theme's large controller-
+friendly fonts) were laid out in a plain, non-scrolling `MarginContainer`.
+Add those up against a real screen that isn't itself roughly 1920:620-
+shaped, and the tab content's *starting position* ends up below the
+visible window - not merely short on room, actually unreachable, with no
+way to scroll to it, since nothing above it could scroll either. A
+`custom_minimum_size` floor on the tab area alone doesn't fix that - a
+minimum size can't rescue content whose starting Y position is already
+past the bottom of the screen.
+
+Two changes, together: `_hero_height()` (`GameDetail`/`RecompDetail`) now
+caps Hero to `min(width / ratio, height * 0.4)` instead of width alone, so
+it can't dominate the page on a shorter/wider-than-expected real screen.
+More importantly, the whole body below Hero - actions row, meta, status,
+tabs, *and* tab content together - now lives inside one `ContentScroll`
+(`Layout > Hero, ContentScroll > ContentMargin > Content > ...`), the same
+single-big-scroll-area shape `GameSettings`/`AppSettings`/`EmulatorDetail`
+already use successfully. Worst case now is "scroll past the Play button
+to reach Achievements on an unusually short screen," which is recoverable
+- never "structurally unreachable, no matter what," which is what a fixed-
+height container with no scroll ability at all actually was.
+
+### Three more real bugs caught by actually using the feature
+
+All three confirmed on this machine, not just reasoned about:
+
+- **Achievement rows weren't focusable at all.** `_make_achievement_row`
+  originally returned a plain `HBoxContainer` for its richer custom visual
+  (badge + title + points + description) - but a bare `HBoxContainer` has
+  `focus_mode = FOCUS_NONE`, so there was nothing in the whole pane for a
+  controller's D-pad to land on, which is exactly why only a mouse wheel
+  could scroll it. Fixed the same way `GameTileFactory` already builds a
+  tile's rich custom visual with real click/focus behavior: a flat
+  `Button` hosting plain child Controls (with `mouse_filter =
+  MOUSE_FILTER_IGNORE` on the decorative children so clicks still reach
+  the button) instead of `Button.text`/`.icon`. Also added the same
+  `_grab_first_focusable`-on-tab-show call every other tabbed screen here
+  already has (`GameSettings`/`AppSettings`/`EmulatorDetail`) - `GameDetail`
+  and `RecompDetail` were missing it entirely for their new tabs, so even
+  with focusable rows, nothing would have claimed focus when a tab
+  opened. Verified for real: a synthesized Down-key event (not just
+  flipping `Input.action_press`, which doesn't trigger Viewport's actual
+  GUI focus-navigation pipeline) moved focus from one achievement row to
+  the next.
+- **The screenshot dialog could balloon past its configured size.**
+  `TextureRect`'s default `expand_mode` (`EXPAND_KEEP_SIZE`) makes the
+  control's own minimum size track the texture's *native* pixel
+  dimensions, not the `custom_minimum_size` set alongside it - so a real
+  1920x1080+ screenshot demanded that much space from its container
+  regardless of the dialog's configured 900x640. Fixed by setting
+  `expand_mode = EXPAND_IGNORE_SIZE` (same property every other image
+  preview in this app - `ArtManager`'s previews, `GameTileFactory`'s tiles
+  - already set, which is exactly why this bug was new to the screenshot
+  dialog specifically). Confirmed for real: dialog now renders at ~876x714
+  for an actual screenshot, not blown up to native resolution.
+- **Capture grabbed every monitor on a multi-monitor setup.** `spectacle`'s
+  default is `-f`/fullscreen, which on this machine's real dual-monitor
+  setup produced one 5760x5373 image stitched across both screens.
+  `ScreenshotManager` now passes `-m` (current monitor - whichever one has
+  the cursor, the best available proxy for "the one with the game," since
+  spectacle has no simpler way to ask specifically for that) - confirmed
+  for real: a plain `-m` capture came back 1920x1080, a single real
+  monitor's resolution, not the stitched combination.
+
 ## Roadmap
 
+- **Confirm the screenshot hotkey fires during real gameplay** — capture
+  itself is confirmed (`spectacle` works for real on this machine), but
+  whether Select+Y/F12 actually reaches `LaunchManager._unhandled_input`
+  while the window is minimized/unfocused during an actual play session
+  hasn't been tested yet - see "Screenshots are ours to take" above
 - **Edit for Platforms** — AppSettings currently only has Add + Delete for
   platforms; changing an existing one means delete + recreate (Emulators got
   a real edit path via the per-row repo editor)

@@ -11,8 +11,20 @@ extends Control
 ##
 ## Same hero-aspect-ratio sizing as GameDetail (1920:620, SteamGridDB's
 ## actual hero ratio) for a consistent look between the two.
+##
+## Has a "Screenshots" tab (ScreenshotManager), same as GameDetail, keyed
+## under the same "recomp:<id>" id already used for cover/hero art. No
+## "Achievements" tab here, unlike GameDetail - RetroAchievements' catalog
+## and every emulator with a native RA client are both essentially classic-
+## console-only, so there's no realistic case where a self-contained native
+## recomp would have an RA game id to show anything for.
 
 const HERO_ASPECT_RATIO := 1920.0 / 620.0
+const HERO_MAX_VIEWPORT_FRACTION := 0.4  ## see GameDetail._hero_height - same reasoning
+const ACTIVE_COLOR := Color(0.4, 0.85, 0.5, 1)
+const ERROR_COLOR := Color(0.9, 0.45, 0.45, 1)
+const DOWNLOAD_COLOR := Color(0.6, 0.65, 0.7, 1)
+const INACTIVE_TAB_COLOR := Color(0.6, 0.65, 0.7, 1)
 
 @onready var hero: Control = %Hero
 @onready var hero_color: ColorRect = %HeroColor
@@ -23,14 +35,20 @@ const HERO_ASPECT_RATIO := 1920.0 / 620.0
 @onready var gear_button: Button = %GearButton
 @onready var meta_label: Label = %MetaLabel
 @onready var status_label: Label = %StatusLabel
+@onready var screenshots_tab_button: Button = %ScreenshotsTabButton
+@onready var screenshots_pane: GridContainer = %ScreenshotsPane
 
 var _recomp_id: String = ""
 
 func set_args(args: Dictionary) -> void:
 	_recomp_id = args.get("recomp_id", "")
 
+func _hero_height() -> float:
+	var viewport_size := get_viewport_rect().size
+	return min(viewport_size.x / HERO_ASPECT_RATIO, viewport_size.y * HERO_MAX_VIEWPORT_FRACTION)
+
 func _ready() -> void:
-	hero.custom_minimum_size.y = get_viewport_rect().size.x / HERO_ASPECT_RATIO
+	hero.custom_minimum_size.y = _hero_height()
 
 	var recomp := EmulatorRegistry.get_emulator(_recomp_id)
 	var shell := get_tree().get_first_node_in_group("shell")
@@ -60,8 +78,38 @@ func _ready() -> void:
 	gear_button.pressed.connect(func():
 		Navigator.push("res://ui/screens/RecompSettings.tscn", {"recomp_id": _recomp_id})
 	)
+	screenshots_tab_button.pressed.connect(func():
+		screenshots_pane.visible = true
+		_grab_first_focusable(screenshots_pane)
+	)
+	LaunchManager.screenshot_captured.connect(_on_screenshot_captured)
+	_build_screenshots_pane()
+	screenshots_pane.visible = true
 
 	play_button.grab_focus()
+
+## Depth-first search for the first visible, focusable control under
+## `root` - same pattern as GameDetail/GameSettings/AppSettings/
+## EmulatorDetail. Used when the Screenshots tab button is actually
+## pressed (there's only the one tab, but the pane still starts empty/
+## unfocused otherwise) and after a live rebuild.
+func _grab_first_focusable(root: Control) -> void:
+	var found := _find_first_focusable(root)
+	if found != null:
+		found.grab_focus()
+
+func _find_first_focusable(node: Node) -> Control:
+	for child in node.get_children():
+		if child is Control:
+			var control: Control = child
+			if not control.visible:
+				continue
+			if control.focus_mode != Control.FOCUS_NONE:
+				return control
+			var nested := _find_first_focusable(control)
+			if nested != null:
+				return nested
+	return null
 
 func _first_platform(recomp: Dictionary) -> Dictionary:
 	var platform_ids: Array = recomp.get("platforms", [])
@@ -82,7 +130,7 @@ func _refresh_meta() -> void:
 	play_button.tooltip_text = "" if active != null else "Install a version first - gear icon → Versions."
 
 func _on_play_pressed() -> void:
-	var result: Dictionary = LaunchManager.launch_emulator_standalone(_recomp_id)
+	var result: Dictionary = LaunchManager.launch_emulator_standalone(_recomp_id, null, _art_key())
 	if result.get("ok", false):
 		EmulatorRegistry.record_played(_recomp_id)
 		_refresh_meta()
@@ -92,5 +140,79 @@ func _show_result(result: Dictionary) -> void:
 	status_label.text = result.get("message", "")
 	status_label.add_theme_color_override(
 		"font_color",
-		Color(0.4, 0.85, 0.5, 1) if result.get("ok", false) else Color(0.9, 0.45, 0.45, 1)
+		ACTIVE_COLOR if result.get("ok", false) else ERROR_COLOR
 	)
+
+# ======================== Screenshots ========================
+# Same gallery UI as GameDetail's Screenshots tab, just keyed under
+# "recomp:<id>" instead of a raw game id.
+
+func _build_screenshots_pane() -> void:
+	for child in screenshots_pane.get_children():
+		child.queue_free()
+
+	var paths: Array = ScreenshotManager.screenshots_for(_art_key())
+	if paths.is_empty():
+		var empty := Label.new()
+		empty.text = "No screenshots yet - take one while playing (see Settings for the hotkey)."
+		empty.add_theme_color_override("font_color", DOWNLOAD_COLOR)
+		screenshots_pane.add_child(empty)
+		return
+
+	for path in paths:
+		screenshots_pane.add_child(_make_screenshot_thumb(path))
+
+	if screenshots_pane.visible:
+		_grab_first_focusable(screenshots_pane)
+
+func _make_screenshot_thumb(path: String) -> Button:
+	var thumb := Button.new()
+	thumb.custom_minimum_size = Vector2(180, 101)
+	thumb.text = ""
+	var image := Image.new()
+	if image.load(path) == OK:
+		image.resize(180, 101, Image.INTERPOLATE_BILINEAR)
+		thumb.icon = ImageTexture.create_from_image(image)
+		thumb.expand_icon = true
+	thumb.pressed.connect(func(): _show_screenshot_dialog(path))
+	return thumb
+
+func _show_screenshot_dialog(path: String) -> void:
+	var dialog := AcceptDialog.new()
+	dialog.title = path.get_file()
+	dialog.size = Vector2i(900, 640)
+	dialog.get_ok_button().text = "Close"
+	add_child(dialog)
+
+	var vbox := VBoxContainer.new()
+	vbox.add_theme_constant_override("separation", 12)
+	dialog.add_child(vbox)
+
+	var full := TextureRect.new()
+	full.custom_minimum_size = Vector2(860, 500)
+	# See GameDetail._show_screenshot_dialog - same fix, same reason.
+	full.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+	full.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
+	var image := Image.new()
+	if image.load(path) == OK:
+		full.texture = ImageTexture.create_from_image(image)
+	vbox.add_child(full)
+
+	var delete_button := Button.new()
+	delete_button.text = "Delete"
+	vbox.add_child(delete_button)
+	delete_button.pressed.connect(func():
+		ScreenshotManager.delete_screenshot(path)
+		dialog.queue_free()
+		_build_screenshots_pane()
+	)
+
+	dialog.confirmed.connect(func(): dialog.queue_free())
+	dialog.close_requested.connect(func(): dialog.queue_free())
+	dialog.popup_centered()
+
+func _on_screenshot_captured(ok: bool, message: String) -> void:
+	if ok:
+		_build_screenshots_pane()
+	status_label.text = message
+	status_label.add_theme_color_override("font_color", ACTIVE_COLOR if ok else ERROR_COLOR)
