@@ -681,3 +681,15 @@ All three confirmed on this machine, not just reasoned about:
   the exact screen-to-screen navigation sequence that triggered it would help.
 - **AppImage packaging** — Godot Linux export preset, `AppRun`/`.desktop`/icon,
   `appimagetool` build script (not yet installed on this machine)
+
+## License
+
+Copyright (C) 2026 gpj252
+
+retrl is free software: you can redistribute it and/or modify it under the
+terms of the GNU General Public License, version 3, as published by the Free
+Software Foundation. It is distributed in the hope that it will be useful, but
+WITHOUT ANY WARRANTY; see the [LICENSE](LICENSE) file for details.
+
+Forks and modified versions are welcome, and must stay open source under the
+same license.
