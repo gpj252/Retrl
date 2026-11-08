@@ -19,6 +19,8 @@ extends Control
 ## console-only, so there's no realistic case where a self-contained native
 ## recomp would have an RA game id to show anything for.
 
+const PluginTabHost := preload("res://ui/components/plugin_tab_host.gd")
+
 const HERO_ASPECT_RATIO := 1920.0 / 620.0
 const HERO_MAX_VIEWPORT_FRACTION := 0.4  ## see GameDetail._hero_height - same reasoning
 const ACTIVE_COLOR := Color(0.4, 0.85, 0.5, 1)
@@ -39,6 +41,7 @@ const INACTIVE_TAB_COLOR := Color(0.6, 0.65, 0.7, 1)
 @onready var screenshots_pane: GridContainer = %ScreenshotsPane
 
 var _recomp_id: String = ""
+var _plugin_tabs = null  ## PluginTabHost - tabs registered by plugins, appended after Screenshots
 
 func set_args(args: Dictionary) -> void:
 	_recomp_id = args.get("recomp_id", "")
@@ -78,15 +81,22 @@ func _ready() -> void:
 	gear_button.pressed.connect(func():
 		Navigator.push("res://ui/screens/RecompSettings.tscn", {"recomp_id": _recomp_id})
 	)
-	screenshots_tab_button.pressed.connect(func():
-		screenshots_pane.visible = true
-		_grab_first_focusable(screenshots_pane)
-	)
+	screenshots_tab_button.pressed.connect(func(): _show_tab("screenshots"))
+	_plugin_tabs = PluginTabHost.new(screenshots_tab_button.get_parent(), screenshots_pane.get_parent(), INACTIVE_TAB_COLOR)
+	_plugin_tabs.populate(PluginRegistry.recomp_tabs_for(recomp), recomp, _show_tab)
 	LaunchManager.screenshot_captured.connect(_on_screenshot_captured)
 	_build_screenshots_pane()
-	screenshots_pane.visible = true
+	_show_tab("screenshots")
 
 	play_button.grab_focus()
+
+func _show_tab(tab: String) -> void:
+	# Plugin tabs: the host shows the matching one (and hides the rest) and
+	# returns its pane; null means `tab` is the built-in Screenshots tab.
+	var plugin_pane: Control = _plugin_tabs.show_tab(tab) if _plugin_tabs != null else null
+	screenshots_pane.visible = tab == "screenshots"
+	screenshots_tab_button.add_theme_color_override("font_color", Color.WHITE if tab == "screenshots" else INACTIVE_TAB_COLOR)
+	_grab_first_focusable(plugin_pane if plugin_pane != null else screenshots_pane)
 
 ## Depth-first search for the first visible, focusable control under
 ## `root` - same pattern as GameDetail/GameSettings/AppSettings/

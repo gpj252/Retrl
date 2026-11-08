@@ -25,6 +25,8 @@ extends Control
 ## ScreenshotManager has saved for this game - see LaunchManager's
 ## screenshot hotkey for how those get taken in the first place).
 
+const PluginTabHost := preload("res://ui/components/plugin_tab_host.gd")
+
 const HERO_ASPECT_RATIO := 1920.0 / 620.0
 const ACTIVE_COLOR := Color(0.4, 0.85, 0.5, 1)
 const ERROR_COLOR := Color(0.9, 0.45, 0.45, 1)
@@ -47,6 +49,7 @@ const INACTIVE_TAB_COLOR := Color(0.6, 0.65, 0.7, 1)
 @onready var screenshots_pane: GridContainer = %ScreenshotsPane
 
 var _game_id: String = ""
+var _plugin_tabs = null  ## PluginTabHost - tabs registered by plugins, appended after the built-in two
 
 const HERO_MAX_VIEWPORT_FRACTION := 0.4
 
@@ -109,6 +112,8 @@ func _ready() -> void:
 
 	achievements_tab_button.pressed.connect(func(): _show_tab("achievements"))
 	screenshots_tab_button.pressed.connect(func(): _show_tab("screenshots"))
+	_plugin_tabs = PluginTabHost.new(achievements_tab_button.get_parent(), achievements_pane.get_parent(), INACTIVE_TAB_COLOR)
+	_plugin_tabs.populate(PluginRegistry.game_tabs_for(game), game, _show_tab)
 	LaunchManager.screenshot_captured.connect(_on_screenshot_captured)
 	_build_achievements_pane(int(game.get("retroachievements_game_id", 0)))
 	_build_screenshots_pane()
@@ -133,6 +138,9 @@ func _show_result(result: Dictionary) -> void:
 	)
 
 func _show_tab(tab: String) -> void:
+	# Plugin tabs: the host shows the matching one (and hides the rest) and
+	# returns its pane; null means `tab` is one of the two built-in tabs.
+	var plugin_pane: Control = _plugin_tabs.show_tab(tab) if _plugin_tabs != null else null
 	achievements_pane.visible = tab == "achievements"
 	screenshots_pane.visible = tab == "screenshots"
 	achievements_tab_button.add_theme_color_override("font_color", Color.WHITE if tab == "achievements" else INACTIVE_TAB_COLOR)
@@ -144,7 +152,10 @@ func _show_tab(tab: String) -> void:
 	# this, a controller could click into a tab but never navigate *within*
 	# it - confirmed this was exactly why Achievements only responded to a
 	# mouse wheel, not a controller, even once real rows existed.
-	_grab_first_focusable(achievements_pane if tab == "achievements" else screenshots_pane)
+	if plugin_pane != null:
+		_grab_first_focusable(plugin_pane)
+	else:
+		_grab_first_focusable(achievements_pane if tab == "achievements" else screenshots_pane)
 
 ## Depth-first search for the first visible, focusable control under
 ## `root` - see _show_tab and the pane-rebuild calls below.

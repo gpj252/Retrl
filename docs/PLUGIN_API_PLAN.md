@@ -1,7 +1,18 @@
 # Retrl plugin API: plan
 
-Status: proposal. Nothing here is implemented. Written against the code as of
+Status: proposal, with the first part started. Written against the code as of
 commit `513d75b` (Godot 4.3, GDScript, autoload-based).
+
+**Implemented so far (Phase 1, not yet run in Godot):** the `PluginRegistry`
+autoload (menu items, pages, game tabs, recomp tabs, `remove_plugin`),
+`Navigator.push_page`, a registry-driven side menu in `Shell`, and plugin tabs
+appended to `GameDetail` and `RecompDetail` through
+`ui/components/plugin_tab_host.gd`. The built-in Achievements and Screenshots
+tabs were deliberately left as they are for now (migrating them onto the
+registry is still to do). There is no plugin loading from disk yet. To try the
+registries by hand, start the app with `RETRL_PLUGIN_DEMO=1`
+(`plugins/examples/hello_plugin.gd`). Not yet done: the Phase 0 spike, plugin
+`on_back` handling, tab ordering relative to the built-in tabs.
 
 ## 1. Goals and non-goals
 

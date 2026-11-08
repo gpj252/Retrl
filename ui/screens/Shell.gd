@@ -37,6 +37,7 @@ func _ready() -> void:
 	Navigator.register_host(page_host)
 	menu_button.pressed.connect(toggle_side_menu)
 	_build_side_menu()
+	PluginRegistry.menu_changed.connect(_build_side_menu)
 	Navigator.push("res://ui/screens/Home.tscn")
 	_update_clock()
 	LaunchManager.game_started.connect(_on_game_started)
@@ -85,6 +86,7 @@ func set_title(text: String) -> void:
 
 func _build_side_menu() -> void:
 	for child in menu_items.get_children():
+		menu_items.remove_child(child)
 		child.queue_free()
 	_add_menu_item("Home", func():
 		Navigator.push("res://ui/screens/Home.tscn")
@@ -102,6 +104,10 @@ func _build_side_menu() -> void:
 		Navigator.push("res://ui/screens/RecompLibrary.tscn")
 		close_side_menu()
 	)
+	# Entries added by plugins (PluginRegistry.add_menu_item) sit between the
+	# built-in browsing pages and Settings.
+	for entry in PluginRegistry.menu_items():
+		_add_menu_item(String(entry["label"]), _on_plugin_menu_pressed.bind(entry))
 	_add_menu_item("Settings", func():
 		Navigator.push("res://ui/screens/AppSettings.tscn")
 		close_side_menu()
@@ -109,6 +115,14 @@ func _build_side_menu() -> void:
 	_add_menu_item("Quit", func():
 		get_tree().quit()
 	)
+
+func _on_plugin_menu_pressed(entry: Dictionary) -> void:
+	var open_callback: Variant = entry.get("open")
+	if open_callback is Callable and open_callback.is_valid():
+		open_callback.call()
+	else:
+		Navigator.push_page(entry["plugin_id"], String(entry.get("page", "")))
+	close_side_menu()
 
 func _add_menu_item(label: String, on_pressed: Callable) -> void:
 	var button := Button.new()
